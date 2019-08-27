@@ -1,11 +1,9 @@
-import api
+import passboltapi
 
 
-if __name__ == '__main__':
+def get_my_passwords(passbolt_obj):
     result = list()
-    passbolt = api.PassboltAPI(config_path="config.ini")
-    passbolt.login()
-    for i in passbolt.get_resources()["body"]:
+    for i in passbolt_obj.get(url="/resources.json?api-version=v2")["body"]:
         result.append({
             "id": i["id"],
             "name": i["name"],
@@ -13,6 +11,23 @@ if __name__ == '__main__':
             "uri": i["uri"]
         })
     for i in result:
-        i["password"] = passbolt.get_secret(i["id"])
+        resource = passbolt_obj.get(
+            "/secrets/resource/{}.json?api-version=v2".format(i["id"]))
+        i["password"] = passbolt_obj.decrypt(resource["body"]["data"])
     print(result)
+
+
+def main():
+    # A simple example to show how to retrieve passwords of a user.
+    # Note the config file is placed in the project directory.
+    passbolt = passboltapi.PassboltAPI(config_path="config.ini")
+    get_my_passwords(passbolt_obj=passbolt)
     passbolt.close_session()
+
+    # Or using context managers
+    with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
+        get_my_passwords(passbolt_obj=passbolt)
+
+
+if __name__ == '__main__':
+    main()

@@ -17,4 +17,19 @@ USER_PRIVATE_KEY_FILE = passbolt_private.asc
 PASSPHRASE = <passbolt_password>
 ```
 
-Check test.py for examples.
+
+
+## Usage
+
+```
+>>>import passboltapi
+>>>passbolt = passboltapi.PassboltAPI(config_path="config.ini")
+
+# Now you may do any get, post, put and delete request.
+>>>r = passbolt.get(url="/resources.json?api-version=v2")
+>>>r = passbolt..post(self.server_url + url, json=data)
+
+# One can also use it as context manager
+>>>with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
+```
+Check test.py for an example.
