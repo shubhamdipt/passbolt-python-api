@@ -17,8 +17,8 @@ Create a config file with the following contents.
     SERVER = http://<server_ip or domain>
     SERVER_PUBLIC_KEY_FILE = <optional: server_public.asc>
     USER_FINGERPRINT = <user_fingerprint>
-    USER_PUBLIC_KEY_FILE = passbolt_public.asc
-    USER_PRIVATE_KEY_FILE = passbolt_private.asc
+    USER_PUBLIC_KEY_FILE = <optional: passbolt_public.asc>
+    USER_PRIVATE_KEY_FILE = <optional: passbolt_private.asc>
     PASSPHRASE = <passbolt_password>
 
 ## Usage
@@ -34,6 +34,26 @@ Create a config file with the following contents.
     >>>with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
 
 Check test.py for an example.
+
+If new keys needs to be imported, then USER_PUBLIC_KEY_FILE and USER_PRIVATE_KEY_FILE settings
+should be in the config ini having the path of the public and private keys file respectively.
+
+To import new keys:
+
+    >>>import passboltapi
+    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True)
+    
+To delete old keys and import only the new ones.
+
+    >>>import passboltapi
+    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True, delete_old_keys=True)
+
+Recommended to do: Do not keep private and public files. 
+Rather just import them using gpg command one time and delete those files.
+
+    $gpg --import public.asc
+    $gpg --batch --import private.asc
+
 
 ### Passbolt API
 

@@ -9,7 +9,7 @@ VERIFY_URL = "/auth/verify.json"
 
 class PassboltAPI:
 
-    def __init__(self, config_path, delete_old_keys=False):
+    def __init__(self, config_path, new_keys=False, delete_old_keys=False):
         """
         :param config_path: Path to the config file.
         :param delete_old_keys: Set true if old keys need to be deleted
@@ -26,13 +26,17 @@ class PassboltAPI:
         self.gpg = gnupg.GPG()
         if delete_old_keys:
             self._delete_old_keys()
-        self._import_gpg_keys()
+        if new_keys:
+            self._import_gpg_keys()
         try:
             self.gpg_fingerprint = [
                 i for i in self.gpg.list_keys() if i["fingerprint"] == self.config["PASSBOLT"]["USER_FINGERPRINT"]
             ][0]["fingerprint"]
         except IndexError:
-            raise Exception("GPG key could not be found. Check: gpg --fingerprint")
+            raise Exception("GPG public key could not be found. Check: gpg --list-keys")
+
+        if self.config["PASSBOLT"]["USER_FINGERPRINT"] not in [i["fingerprint"] for i in self.gpg.list_keys(True)]:
+            raise Exception("GPG private key could not be found. Check: gpg --list-secret-keys")
         self._login()
 
     def __enter__(self):
@@ -45,7 +49,9 @@ class PassboltAPI:
         self.close_session()
 
     def _delete_old_keys(self):
-        self.gpg.delete_keys([i["fingerprint"] for i in self.gpg.list_keys()], False)
+        for i in self.gpg.list_keys():
+            self.gpg.delete_keys(i["fingerprint"], True, passphrase="")
+            self.gpg.delete_keys(i["fingerprint"], False)
 
     def _import_gpg_keys(self):
         if not self.config["PASSBOLT"]["USER_PUBLIC_KEY_FILE"]:

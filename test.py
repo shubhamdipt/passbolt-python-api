@@ -10,6 +10,7 @@ def get_my_passwords(passbolt_obj):
             "username": i["username"],
             "uri": i["uri"]
         })
+        print(i)
     for i in result:
         resource = passbolt_obj.get(
             "/secrets/resource/{}.json?api-version=v2".format(i["id"]))
