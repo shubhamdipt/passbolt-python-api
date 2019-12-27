@@ -90,7 +90,7 @@ class PassboltAPI:
         ))
 
     def get_headers(self):
-        return {"X-CSRF-Token": self.requests_session.cookies['csrfToken']}
+        return {"X-CSRF-Token": self.requests_session.cookies['csrfToken'] if 'csrfToken' in self.requests_session.cookies else ''}
 
     def get_server_public_key(self):
         r = self.requests_session.get(self.server_url + VERIFY_URL)
