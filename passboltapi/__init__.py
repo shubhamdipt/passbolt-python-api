@@ -89,6 +89,9 @@ class PassboltAPI:
             passphrase=str(self.config["PASSBOLT"]["PASSPHRASE"])
         ))
 
+	def get_headers(self):
+		return {"X-CSRF-Token": self.requests_session.cookies['csrfToken']}
+
     def get_server_public_key(self):
         r = self.requests_session.get(self.server_url + VERIFY_URL)
         return r.json()["body"]["fingerprint"], r.json()["body"]["keydata"]
@@ -98,15 +101,15 @@ class PassboltAPI:
         return r.json()
 
     def post(self, url, data):
-        r = self.requests_session.post(self.server_url + url, json=data)
+        r = self.requests_session.post(self.server_url + url, json=data, headers=self.get_headers())
         return r.json()
 
     def put(self, url, data):
-        r = self.requests_session.put(self.server_url + url, json=data)
+        r = self.requests_session.put(self.server_url + url, json=data, headers=self.get_headers())
         return r.json()
 
     def delete(self, url):
-        r = self.requests_session.delete(self.server_url + url)
+        r = self.requests_session.delete(self.server_url + url, headers=self.get_headers())
         return r.json()
 
     def close_session(self):
