@@ -89,8 +89,8 @@ class PassboltAPI:
             passphrase=str(self.config["PASSBOLT"]["PASSPHRASE"])
         ))
 
-	def get_headers(self):
-		return {"X-CSRF-Token": self.requests_session.cookies['csrfToken']}
+    def get_headers(self):
+        return {"X-CSRF-Token": self.requests_session.cookies['csrfToken']}
 
     def get_server_public_key(self):
         r = self.requests_session.get(self.server_url + VERIFY_URL)
