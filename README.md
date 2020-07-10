@@ -2,6 +2,8 @@
 
 ## Installation
 
+    $git clone https://github.com/Pitenager/passbolt-python-api.git
+    $cd passbolt-python-api.git/
     $pip install passbolt-python-api 
 
 ## Dependencies
@@ -11,7 +13,7 @@
 
 ## Configuration
 
-Create a config file with the following contents.
+Fill the config.ini file with the following contents.
 
     [PASSBOLT]
     SERVER = http://<server_ip or domain>
@@ -21,7 +23,20 @@ Create a config file with the following contents.
     USER_PRIVATE_KEY_FILE = <optional: passbolt_private.asc>
     PASSPHRASE = <passbolt_password>
 
-## Usage
+
+## CLI usage
+    usage: passbolt_manager.py [-h] [-c CHANGE] [-u UPLOAD] [-d DELETE] [-r READ]
+
+    Client to operate Stratio's Passbolt server
+
+    optional arguments:
+        -h, --help                   show this help message and exit
+        -c CHANGE, --change CHANGE   Change an existing password in Passbolt
+        -u UPLOAD, --upload UPLOAD   Upload new password to Passbolt
+        -d DELETE, --delete DELETE   Delete an existing password in Passbolt
+        -r READ, --read READ         Read an existing password in Passbolt
+
+## API Usage
 
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini")
