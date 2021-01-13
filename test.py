@@ -2,7 +2,7 @@ import passboltapi
 
 
 def get_my_passwords(passbolt_obj):
-    result = list()
+    result = []
     for i in passbolt_obj.get(url="/resources.json?api-version=v2")["body"]:
         result.append({
             "id": i["id"],
