@@ -8,7 +8,7 @@ def get_my_passwords(passbolt_obj):
             "id": i["id"],
             "name": i["name"],
             "username": i["username"],
-            "uri": i["uri"]
+            "uri": i["uri"],
         })
         print(i)
     for i in result:
@@ -30,5 +30,5 @@ def main():
         get_my_passwords(passbolt_obj=passbolt)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
