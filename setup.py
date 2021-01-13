@@ -18,7 +18,7 @@
 #     rm -rf ./dist && python3 setup.py sdist bdist_wheel && python3 -m twine upload dist/*
 #
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 # Usage: python setup.py sdist bdist_wheel
 
