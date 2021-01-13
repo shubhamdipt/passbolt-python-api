@@ -1,3 +1,4 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/18b28c1dda31468196190062cf9ddb8a)](https://app.codacy.com/gh/Pitenager/passbolt-python-api?utm_source=github.com&utm_medium=referral&utm_content=Pitenager/passbolt-python-api&utm_campaign=Badge_Grade)
 [![DeepSource](https://deepsource.io/gh/Pitenager/passbolt-python-api.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Pitenager/passbolt-python-api/?ref=repository-badge)
 # Passbolt-python-API
 
