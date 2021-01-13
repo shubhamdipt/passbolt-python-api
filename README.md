@@ -1,3 +1,4 @@
+[![DeepSource](https://deepsource.io/gh/Pitenager/passbolt-python-api.svg/?label=active+issues&show_trend=true)](https://deepsource.io/gh/Pitenager/passbolt-python-api/?ref=repository-badge)
 # Passbolt-python-API
 
 ## Installation
