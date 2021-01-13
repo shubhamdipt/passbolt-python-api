@@ -132,7 +132,7 @@ def change(passbolt, name):
                     url=f"/resources/{resourceId}.json?api-version=v2",
                     data=json_data)
 
-        print(Fore.GREEN + f"[-] Password changed")
+        print(Fore.GREEN + "[-] Password changed")
 
     except Exception as e:
         print(Fore.RED + "[!] Error: " + str(e))
