@@ -4,12 +4,12 @@
 
     $git clone https://github.com/Pitenager/passbolt-python-api.git
     $cd passbolt-python-api.git/
-    $pip install passbolt-python-api 
+    $pip install passbolt-python-api
 
 ## Dependencies
 
-  - Python3
-  - GPG (also known as GnuPG) software
+- Python3
+- GPG (also known as GnuPG) software
 
 ## Configuration
 
@@ -23,8 +23,8 @@ Fill the config.ini file with the following contents.
     USER_PRIVATE_KEY_FILE = <optional: passbolt_private.asc>
     PASSPHRASE = <passbolt_password>
 
-
 ## CLI usage
+
     usage: passbolt_manager.py [-h] [-c CHANGE] [-u UPLOAD] [-d DELETE] [-r READ]
 
     Client to operate Stratio's Passbolt server
@@ -40,11 +40,11 @@ Fill the config.ini file with the following contents.
 
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini")
-    
+
     # Now you may do any get, post, put and delete request.
     >>>r = passbolt.get(url="/resources.json?api-version=v2")
     >>>r = passbolt.post(self.server_url + url, json=data)
-    
+
     # One can also use it as context manager
     >>>with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
 
@@ -57,18 +57,17 @@ To import new keys:
 
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True)
-    
+
 To delete old keys and import only the new ones.
 
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True, delete_old_keys=True)
 
-Recommended to do: Do not keep private and public files. 
+Recommended to do: Do not keep private and public files.
 Rather just import them using gpg command one time and delete those files.
 
     $gpg --import public.asc
     $gpg --batch --import private.asc
-
 
 ### Passbolt API
 
