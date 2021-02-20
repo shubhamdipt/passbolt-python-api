@@ -54,6 +54,11 @@ Rather just import them using gpg command one time and delete those files.
     $gpg --import public.asc
     $gpg --batch --import private.asc
 
+For deleting gpg keys
+
+    $gpg --delete-secret-keys <fingerprint>
+    $gpg --delete-key <fingerprint>
+
 
 ### Passbolt API
 
