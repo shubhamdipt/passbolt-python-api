@@ -22,7 +22,7 @@ class PassboltAPI:
             raise ValueError("Missing value for SERVER in config.ini")
 
         self.server_url = self.config["PASSBOLT"]["SERVER"]
-        self.user_fingerprint = self.config["PASSBOLT"]["USER_FINGERPRINT"]
+        self.user_fingerprint = self.config["PASSBOLT"]["USER_FINGERPRINT"].upper()
         self.gpg = gnupg.GPG()
         if delete_old_keys:
             self._delete_old_keys()
@@ -30,12 +30,12 @@ class PassboltAPI:
             self._import_gpg_keys()
         try:
             self.gpg_fingerprint = [
-                i for i in self.gpg.list_keys() if i["fingerprint"] == self.config["PASSBOLT"]["USER_FINGERPRINT"]
+                i for i in self.gpg.list_keys() if i["fingerprint"] == self.user_fingerprint
             ][0]["fingerprint"]
         except IndexError:
             raise Exception("GPG public key could not be found. Check: gpg --list-keys")
 
-        if self.config["PASSBOLT"]["USER_FINGERPRINT"] not in [i["fingerprint"] for i in self.gpg.list_keys(True)]:
+        if self.user_fingerprint not in [i["fingerprint"] for i in self.gpg.list_keys(True)]:
             raise Exception("GPG private key could not be found. Check: gpg --list-secret-keys")
         self._login()
 
