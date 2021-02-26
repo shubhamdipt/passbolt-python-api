@@ -28,7 +28,7 @@ with open('requirements.txt') as fp:
     install_requires = fp.read()
 
 DESCRIPTION = "A python client for Passbolt."
-VERSION = "0.1.3"
+VERSION = "0.1.4"
 
 
 with open("README.md", "r") as fh:
@@ -43,7 +43,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
     url="https://github.com/shubhamdipt/passbolt-python-api",
-    license=open('LICENSE').read(),
+    license="MIT",
     packages=['passboltapi'],
     platforms=["any"],
     classifiers=(
