@@ -21,10 +21,21 @@ Create a config file with the following contents.
     USER_PRIVATE_KEY_FILE = <optional: passbolt_private.asc>
     PASSPHRASE = <passbolt_password>
 
+Or as a dictionary
+
+    config = {
+        "PASSBOLT": {
+            "SERVER": "http://<server_ip or domain>"
+            ....(same as above)
+        }
+    }
+
 ## Usage
 
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini")
+    # Or pass the configuration settings as a dict
+    >>>passbolt = passboltapi.PassboltAPI(config=<dictionary as the given example config.ini>)
     
     # Now you may do any get, post, put and delete request.
     >>>r = passbolt.get(url="/resources.json?api-version=v2")

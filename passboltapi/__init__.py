@@ -9,15 +9,20 @@ VERIFY_URL = "/auth/verify.json"
 
 class PassboltAPI:
 
-    def __init__(self, config_path, new_keys=False, delete_old_keys=False):
+    def __init__(self, config=None, config_path=None, new_keys=False, delete_old_keys=False):
         """
+        :param config: Config as a dictionary
         :param config_path: Path to the config file.
         :param delete_old_keys: Set true if old keys need to be deleted
         """
+        self.config = config
+        if config_path:
+            self.config = configparser.ConfigParser()
+            self.config.read_file(open(config_path, "r"))
         self.requests_session = requests.Session()
-        self.config = configparser.ConfigParser()
-        self.config.read_file(open(config_path, "r"))
 
+        if not self.config:
+            raise ValueError("Missing config. Provide config as dictionary or path to configuration file.")
         if not self.config["PASSBOLT"]["SERVER"]:
             raise ValueError("Missing value for SERVER in config.ini")
 
