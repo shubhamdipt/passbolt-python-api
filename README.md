@@ -6,7 +6,7 @@
 
 ## Dependencies
 
-  - Python3
+  - Python >= 3.6
   - GPG (also known as GnuPG) software
 
 ## Configuration
@@ -32,6 +32,39 @@ Or as a dictionary
 
 ## Usage
 
+
+### Import GPG keys from Passbolt
+
+The first step will be to import the private and public keys using gpg for encryption.
+
+Note: Do not keep private and public files. Rather just import them using gpg command one time and delete those files.
+
+#### Using Python
+To import new keys using Python:
+
+    >>>import passboltapi
+    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True)
+    
+To delete old keys and import only the new ones.
+
+    >>>import passboltapi
+    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True, delete_old_keys=True)
+
+#### Using GPG
+
+Import new keys:
+
+    $gpg --import public.asc
+    $gpg --batch --import private.asc
+
+Deleting existing keys:
+
+    $gpg --delete-secret-keys <fingerprint>
+    $gpg --delete-key <fingerprint>
+
+
+## How to use PassboltAPI client
+
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini")
     # Or pass the configuration settings as a dict
@@ -44,31 +77,32 @@ Or as a dictionary
     # One can also use it as context manager
     >>>with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
 
+
+To get all resources
+
+    resources = {record.username: record for record in passbolt.list_resources(folder_id=folder_id)}
+
+To create new resource (optional: folder)
+    
+    response = passbolt.create_resource(
+        name=name,
+        username=username,
+        password=password,
+        uri=uri, # optional
+        description=description,  # optional
+        folder=passbolt_folder_id  # optional
+    )
+
+To move resource to folder
+
+    passbolt.move_resource_to_folder(resource_id, folder_id)
+
+
+### Sample test
 Check test.py for an example.
 
 If new keys needs to be imported, then USER_PUBLIC_KEY_FILE and USER_PRIVATE_KEY_FILE settings
 should be in the config ini having the path of the public and private keys file respectively.
-
-To import new keys:
-
-    >>>import passboltapi
-    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True)
-    
-To delete old keys and import only the new ones.
-
-    >>>import passboltapi
-    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True, delete_old_keys=True)
-
-Recommended to do: Do not keep private and public files. 
-Rather just import them using gpg command one time and delete those files.
-
-    $gpg --import public.asc
-    $gpg --batch --import private.asc
-
-For deleting gpg keys
-
-    $gpg --delete-secret-keys <fingerprint>
-    $gpg --delete-key <fingerprint>
 
 
 ### Passbolt API
