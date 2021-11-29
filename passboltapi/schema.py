@@ -99,6 +99,7 @@ class PassboltFolderTuple(NamedTuple):
     modified_by: PassboltUserIdType
     folder_parent_id: PassboltFolderIdType
     personal: bool
+    permissions: List[PassboltPermissionTuple] = []
 
 
 class PassboltGroupTuple(NamedTuple):

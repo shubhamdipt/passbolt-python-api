@@ -32,6 +32,10 @@ LOGIN_URL = "/auth/login.json"
 VERIFY_URL = "/auth/verify.json"
 
 
+class PassboltValidationError(Exception):
+    pass
+
+
 class APIClient:
 
     def __init__(self, config: Optional[str] = None, config_path: Optional[str] = None, new_keys: bool = False,
@@ -163,6 +167,15 @@ class PassboltAPI(APIClient):
 
     Design Principle: All passbolt aware public methods must accept or output one of PassboltTupleTypes"""
 
+    def _encrypt_secrets(self, secret_text: str, recipients: List[PassboltUserTuple]) -> List[Mapping]:
+        return [
+            {
+                "user_id": user.id,
+                "data": self.encrypt(secret_text, user.gpgkey.fingerprint)
+            }
+            for user in recipients
+        ]
+
     def iterate_resources(self, params: Optional[dict] = None):
         params = params or {}
         url_params = urllib.parse.urlencode(params)
@@ -199,21 +212,25 @@ class PassboltAPI(APIClient):
             "secrets": new_secret
         }, return_response_object=True)
 
-    def list_users(self, can_access: Union[None, PassboltResourceTuple, PassboltFolderTuple] = None) \
+    def list_users(self, can_access: Union[None, PassboltResourceTuple, PassboltFolderTuple] = None, force_list=True) \
             -> List[PassboltUserTuple]:
-        if can_access is not None:
-            params = {"filter[has-access]": can_access.id}
-        else:
+        if can_access is None:
             params = {}
+        else:
+            params = {"filter[has-access]": can_access.id}
+        params["contain[permission]"] = True
         response = self.get(f"/users.json", params=params)
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
-
-        response["body"]: List[Mapping]
-
-        return constructor(
+        response = response["body"]
+        users = constructor(
             PassboltUserTuple,
-            subconstructors={"gpgkey": constructor(PassboltOpenPgpKeyTuple)},
-        )(response["body"])
+            subconstructors={
+                "gpgkey": constructor(PassboltOpenPgpKeyTuple),
+            },
+        )(response)
+        if isinstance(users, PassboltUserTuple) and force_list:
+            return [users]
+        return users
 
     def import_public_keys(self, trustlevel='TRUST_FULLY'):
         # get all users
@@ -225,32 +242,121 @@ class PassboltAPI(APIClient):
     def describe_folder(self, folder_id):
         return self.get(f"/folders/{folder_id}.json")
 
-    def create_resource(self, name: str, username: str, password: str, uri: Optional[str] = None,
-                        description: Optional[str] = None, folder: Optional[str] = None):
-        """Creates a new resource on passbolt and shares it with the provided group and folder"""
-        r = self.post("/resources.json", {
+    def create_resource(self, name: str, password: str,
+                        username: str = "",
+                        description: str = "",
+                        uri: str = "",
+                        resource_type_id: Optional[PassboltResourceTypeIdType] = None,
+                        folder: Optional[PassboltFolderTuple] = None):
+        """Creates a new resource on passbolt and shares it with the provided folder recipients"""
+
+        if not name:
+            raise PassboltValidationError(f"Name cannot be None or empty -- {name}!")
+        if not password:
+            raise PassboltValidationError(f"Password cannot be None or empty -- {password}!")
+
+        r_create = self.post("/resources.json", {
             "name": name,
             "username": username,
-            "description": description or "",
-            "uri": uri or "",
+            "description": description,
+            "uri": uri,
+            **({"resource_type_id": resource_type_id} if resource_type_id else {}),
             "secrets": [
                 {
                     "data": self.encrypt(password)
                 }
             ],
-            **({"folder_parent_id": folder} if folder else {}),
         }, return_response_object=True)
-        r.raise_for_status()
-        r_json = r.json()
-        new_resource_id = r_json.get("body", {}).get("id")
-        if new_resource_id is None:
-            raise ValueError(f"Unexpected resource creation: {r_json}")
+        r_create.raise_for_status()
+        resource = constructor(PassboltResourceTuple)(r_create.json()["body"])
         if folder:
-            self.move_resource_to_folder(new_resource_id, folder)
-        return r_json
+            # get folder perms
+            if folder.permissions is None:
+                folder = self.read_folder(folder.id)
+            # get users with access to folder
+            lookup_users: Mapping[PassboltUserIdType, PassboltUserTuple] = {
+                user.id: user for user in self.list_users(can_access=folder)
+            }
+            # simulate sharing with folder perms
+            share_payload = {
+                "permissions": [
+                    {
+                        "is_new": True,
+                        "user": lookup_users.get(perm.aro_foreign_key) and lookup_users.get(
+                            perm.aro_foreign_key).username,
+                        **{k: v for k, v in perm._asdict().items() if k != "id"},
+                    } for perm in folder.permissions
+                    if perm.aro == "User" and (
+                            lookup_users.get(perm.aro_foreign_key).gpgkey.fingerprint
+                            != self.user_fingerprint
+                    )
+                ],
+                "secrets": self._encrypt_secrets(password, lookup_users.values())
+            }
+            r_simulate = self.post(f"/share/simulate/resource/{resource.id}.json",
+                                   share_payload, return_response_object=True)
+            r_simulate.raise_for_status()
 
-    def move_resource_to_folder(self, resource_id, folder_id):
-        r = self.post(f"/move/resource/{resource_id}.json", {"folder_parent_id": folder_id},
+            r_share = self.put(f"/share/resource/{resource.id}.json", share_payload, return_response_object=True)
+            r_share.raise_for_status()
+
+            self.move_resource_to_folder(resource, folder)
+        return r_create
+
+    def update_resource(self,
+                        resource: PassboltResourceTuple,
+                        name: Optional[str] = None,
+                        username: Optional[str] = None,
+                        description: Optional[str] = None,
+                        uri: Optional[str] = None,
+                        resource_type_id: Optional[PassboltResourceTypeIdType] = None,
+                        password: Optional[str] = None):
+        payload = {
+            "name": name,
+            "username": username,
+            "description": description,
+            "uri": uri,
+            "resource_type_id": resource_type_id,
+        }
+        if name is None:
+            payload.pop("name")
+        if username is None:
+            payload.pop("username")
+        if description is None:
+            payload.pop("description")
+        if uri is None:
+            payload.pop("url")
+        if resource_type_id is None:
+            payload.pop("resource_type_id")
+
+        if password is not None:
+            assert isinstance(password, str), f"password has to be a string object -- {password}"
+            recipients = self.list_users(can_access=resource)
+
+            payload["secrets"] = self._encrypt_secrets(password, recipients=recipients)
+        if payload:
+            r = self.put(f"/resources/{resource.id}.json", payload, return_response_object=True)
+            r.raise_for_status()
+            return r
+
+    def move_resource_to_folder(self, resource: PassboltResourceTuple, folder: PassboltFolderTuple):
+        r = self.post(f"/move/resource/{resource.id}.json", {"folder_parent_id": folder.id},
                       return_response_object=True)
         r.raise_for_status()
         return r.json()
+
+    def read_folder(self, folder_id: PassboltFolderIdType) -> PassboltFolderTuple:
+        response = self.get(f"/folders/{folder_id}.json", params={"contain[permissions]": True},
+                            return_response_object=True)
+        response.raise_for_status()
+        response = response.json()
+        return constructor(PassboltFolderTuple,
+                           subconstructors={
+                               "permissions": constructor(PassboltPermissionTuple)
+                           })(response['body'])
+
+    def read_resource(self, resource_id: PassboltResourceIdType) -> PassboltResourceTuple:
+        response = self.get(f"/resources/{resource_id}.json", return_response_object=True)
+        response.raise_for_status()
+        response = response.json()["body"]
+        return constructor(PassboltResourceTuple)(response)
