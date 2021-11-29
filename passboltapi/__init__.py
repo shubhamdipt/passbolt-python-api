@@ -325,7 +325,7 @@ class PassboltAPI(APIClient):
         if description is None:
             payload.pop("description")
         if uri is None:
-            payload.pop("url")
+            payload.pop("uri")
         if resource_type_id is None:
             payload.pop("resource_type_id")
 
