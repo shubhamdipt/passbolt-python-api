@@ -53,5 +53,5 @@ if __name__ == '__main__':
             username='Sample username',
             password='password_test',
             uri='https://www.passbolt_uri.com',
-            folder=folder_id
+            folder_id=folder_id
         ))

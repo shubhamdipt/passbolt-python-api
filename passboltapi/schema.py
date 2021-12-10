@@ -134,9 +134,11 @@ def constructor(_namedtuple: AllPassboltTupleTypes,
             3. Filters out dictionary keys that do not exist in namedtuple
             4. Can apply further constructors to subfields"""
         # 1. ingest datatypes
+        is_singleton = False
         if isinstance(data, dict):
             # if single, data is a singleton list
             data = [data]
+            is_singleton = True
         elif isinstance(data, list):
             # if list, assert that all elements are dicts
             assert all(map(lambda datum: type(datum) == dict, data)), "All records must be dicts"
@@ -176,7 +178,7 @@ def constructor(_namedtuple: AllPassboltTupleTypes,
                 for datum in data
             ]
         # handle singleton lists
-        if len(data) == 1:
+        if is_singleton:
             return _namedtuple(**data[0])
         return [_namedtuple(**datum) for datum in data]
 
