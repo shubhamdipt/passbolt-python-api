@@ -271,25 +271,28 @@ class PassboltAPI(APIClient):
         if folder_id:
             folder = self.read_folder(folder_id)
             # get users with access to folder
+            users_list = self.list_users(resource_or_folder_id=folder_id)
             lookup_users: Mapping[PassboltUserIdType, PassboltUserTuple] = {
-                user.id: user for user in self.list_users(resource_or_folder_id=folder_id)
+                user.id: user for user in users_list
             }
+            self_user_id = [user.id for user in users_list if self.user_fingerprint == user.gpgkey.fingerprint]
+            if self_user_id:
+                self_user_id = self_user_id[0]
+            else:
+                raise ValueError("User not in passbolt")
             # simulate sharing with folder perms
+            permissions = [
+                {
+                    "is_new": True,
+                    **{k: v for k, v in perm._asdict().items() if k != "id"},
+                } for perm in folder.permissions
+                if (perm.aro_foreign_key != self_user_id)
+            ]
             share_payload = {
-                "permissions": [
-                    {
-                        "is_new": True,
-                        "user": lookup_users.get(perm.aro_foreign_key) and lookup_users.get(
-                            perm.aro_foreign_key).username,
-                        **{k: v for k, v in perm._asdict().items() if k != "id"},
-                    } for perm in folder.permissions
-                    if perm.aro == "User" and (
-                            lookup_users.get(perm.aro_foreign_key).gpgkey.fingerprint
-                            != self.user_fingerprint
-                    )
-                ],
+                "permissions": permissions,
                 "secrets": self._encrypt_secrets(password, lookup_users.values())
             }
+            # simulate sharing with folder perms
             r_simulate = self.post(f"/share/simulate/resource/{resource.id}.json",
                                    share_payload, return_response_object=True)
             r_simulate.raise_for_status()

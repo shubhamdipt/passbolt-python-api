@@ -28,7 +28,7 @@ with open('requirements.txt') as fp:
     install_requires = fp.read()
 
 DESCRIPTION = "A python client for Passbolt."
-VERSION = "0.2.8"
+VERSION = "0.2.9"
 
 
 with open("README.md", "r") as fh:
