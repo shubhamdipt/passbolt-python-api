@@ -267,9 +267,19 @@ class PassboltAPI(APIClient):
         )
         return constructor(PassboltResourceTuple)(response["children_resources"])
 
-    def list_users(
-        self, resource_or_folder_id: Union[None, PassboltResourceIdType, PassboltFolderIdType] = None, force_list=True
-    ) -> List[PassboltUserTuple]:
+    def get_secret(self, resource_id: PassboltResourceIdType) -> PassboltSecretTuple:
+        response = self.get(f"/secrets/resource/{resource_id}.json")
+        assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
+        return PassboltSecretTuple(**response["body"])
+
+    def update_secret(self, resource_id: PassboltResourceIdType, new_secret):
+        return self.put(f"/resources/{resource_id}.json", {
+            "secrets": new_secret
+        }, return_response_object=True)
+
+    def list_users(self, resource_or_folder_id: Union[None, PassboltResourceIdType, PassboltFolderIdType] = None,
+                   force_list=True) \
+            -> List[PassboltUserTuple]:
         if resource_or_folder_id is None:
             params = {}
         else:
@@ -432,3 +442,22 @@ class PassboltAPI(APIClient):
         if payload:
             r = self.put(f"/resources/{resource_id}.json", payload, return_response_object=True)
             return r
+
+    def move_resource_to_folder(self, resource_id: PassboltResourceIdType, folder_id: PassboltFolderIdType):
+        r = self.post(f"/move/resource/{resource_id}.json", {"folder_parent_id": folder_id},
+                      return_response_object=True)
+        return r.json()
+
+    def read_folder(self, folder_id: PassboltFolderIdType) -> PassboltFolderTuple:
+        response = self.get(f"/folders/{folder_id}.json", params={"contain[permissions]": True},
+                            return_response_object=True)
+        response = response.json()
+        return constructor(PassboltFolderTuple,
+                           subconstructors={
+                               "permissions": constructor(PassboltPermissionTuple)
+                           })(response['body'])
+
+    def read_resource(self, resource_id: PassboltResourceIdType) -> PassboltResourceTuple:
+        response = self.get(f"/resources/{resource_id}.json", return_response_object=True)
+        response = response.json()["body"]
+        return constructor(PassboltResourceTuple)(response)
