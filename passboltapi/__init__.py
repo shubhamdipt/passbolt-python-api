@@ -1,4 +1,5 @@
 import configparser
+import logging
 import urllib.parse
 from typing import List, Union, Mapping, Optional
 
@@ -138,25 +139,45 @@ class APIClient:
 
     def delete(self, url):
         r = self.requests_session.delete(self.server_url + url, headers=self.get_headers())
-        return r.json()
+        try:
+            r.raise_for_status()
+            return r.json()
+        except requests.exceptions.HTTPError as e:
+            logging.error(r.text)
+            raise e
 
     def get(self, url, return_response_object=False, **kwargs):
         r = self.requests_session.get(self.server_url + url, headers=self.get_headers(), **kwargs)
-        if return_response_object:
-            return r
-        return r.json()
+        try:
+            r.raise_for_status()
+            if return_response_object:
+                return r
+            return r.json()
+        except requests.exceptions.HTTPError as e:
+            logging.error(r.text)
+            raise e
 
     def put(self, url, data, return_response_object=False, **kwargs):
         r = self.requests_session.put(self.server_url + url, json=data, headers=self.get_headers(), **kwargs)
-        if return_response_object:
-            return r
-        return r.json()
+        try:
+            r.raise_for_status()
+            if return_response_object:
+                return r
+            return r.json()
+        except requests.exceptions.HTTPError as e:
+            logging.error(r.text)
+            raise e
 
     def post(self, url, data, return_response_object=False, **kwargs):
         r = self.requests_session.post(self.server_url + url, json=data, headers=self.get_headers(), **kwargs)
-        if return_response_object:
-            return r
-        return r.json()
+        try:
+            r.raise_for_status()
+            if return_response_object:
+                return r
+            return r.json()
+        except requests.exceptions.HTTPError as e:
+            logging.error(r.text)
+            raise e
 
     def close_session(self):
         self.requests_session.close()
@@ -212,7 +233,8 @@ class PassboltAPI(APIClient):
             "secrets": new_secret
         }, return_response_object=True)
 
-    def list_users(self, resource_or_folder_id: Union[None, PassboltResourceIdType, PassboltFolderIdType] = None, force_list=True) \
+    def list_users(self, resource_or_folder_id: Union[None, PassboltResourceIdType, PassboltFolderIdType] = None,
+                   force_list=True) \
             -> List[PassboltUserTuple]:
         if resource_or_folder_id is None:
             params = {}
@@ -266,7 +288,6 @@ class PassboltAPI(APIClient):
                 }
             ],
         }, return_response_object=True)
-        r_create.raise_for_status()
         resource = constructor(PassboltResourceTuple)(r_create.json()["body"])
         if folder_id:
             folder = self.read_folder(folder_id)
@@ -295,10 +316,7 @@ class PassboltAPI(APIClient):
             # simulate sharing with folder perms
             r_simulate = self.post(f"/share/simulate/resource/{resource.id}.json",
                                    share_payload, return_response_object=True)
-            r_simulate.raise_for_status()
-
             r_share = self.put(f"/share/resource/{resource.id}.json", share_payload, return_response_object=True)
-            r_share.raise_for_status()
 
             self.move_resource_to_folder(resource_id=resource.id, folder_id=folder_id)
         return r_create
@@ -336,19 +354,16 @@ class PassboltAPI(APIClient):
             payload["secrets"] = self._encrypt_secrets(password, recipients=recipients)
         if payload:
             r = self.put(f"/resources/{resource_id}.json", payload, return_response_object=True)
-            r.raise_for_status()
             return r
 
     def move_resource_to_folder(self, resource_id: PassboltResourceIdType, folder_id: PassboltFolderIdType):
         r = self.post(f"/move/resource/{resource_id}.json", {"folder_parent_id": folder_id},
                       return_response_object=True)
-        r.raise_for_status()
         return r.json()
 
     def read_folder(self, folder_id: PassboltFolderIdType) -> PassboltFolderTuple:
         response = self.get(f"/folders/{folder_id}.json", params={"contain[permissions]": True},
                             return_response_object=True)
-        response.raise_for_status()
         response = response.json()
         return constructor(PassboltFolderTuple,
                            subconstructors={
@@ -357,6 +372,5 @@ class PassboltAPI(APIClient):
 
     def read_resource(self, resource_id: PassboltResourceIdType) -> PassboltResourceTuple:
         response = self.get(f"/resources/{resource_id}.json", return_response_object=True)
-        response.raise_for_status()
         response = response.json()["body"]
         return constructor(PassboltResourceTuple)(response)

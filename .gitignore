@@ -61,6 +61,6 @@ target/
 .idea
 debug.log
 *.zip
-config.ini
+*.ini
 *.key
 *.asc

@@ -48,6 +48,7 @@ def get_passwords_basic():
 if __name__ == '__main__':
     folder_id = "1d932dc0-d0a3-4a44-80c7-4701f84dc307"
     with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
+        # required: passbolt.import_public_keys() when the folder has more users.
         print(passbolt.create_resource(
             name='Sample Name',
             username='Sample username',

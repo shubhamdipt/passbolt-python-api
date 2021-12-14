@@ -90,8 +90,11 @@ To create new resource (optional: folder)
         password=password,
         uri=uri, # optional
         description=description,  # optional
-        folder=passbolt_folder_id  # optional
+        folder_id=passbolt_folder_id  # optional
     )
+    # Note: if you add folder_id, you need to have the public keys of all the users who have access to the foler.
+    # This can be easily achieved as follows:
+    passbolt.import_public_keys()
 
 To move resource to folder
 
