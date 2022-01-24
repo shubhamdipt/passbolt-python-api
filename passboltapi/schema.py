@@ -1,5 +1,6 @@
 # Library Imports
-from typing import List, Union, Mapping, NamedTuple
+from enum import Enum
+from typing import List, Mapping, NamedTuple, Union
 
 from typing_extensions import TypeAlias
 
@@ -23,6 +24,11 @@ PassboltPermissionIdType: TypeAlias = str
 # refers to the response from passbolt which is a string representation of datetime
 PassboltDateTimeType: TypeAlias = str
 PassboltFavoriteDetailsType: TypeAlias = dict
+
+
+class PassboltResourceType(Enum):
+    PASSWORD = 1
+    PASSWORD_WITH_DESCRIPTION = 2
 
 
 class PassboltSecretTuple(NamedTuple):
@@ -90,6 +96,16 @@ class PassboltResourceTuple(NamedTuple):
     permission: Union[PassboltPermissionTuple] = None
 
 
+class PassboltResourceTypeTuple(NamedTuple):
+    id: str
+    slug: str
+    name: str
+    description: str
+    definition: str
+    created: str
+    modified: str
+
+
 class PassboltFolderTuple(NamedTuple):
     id: PassboltFolderIdType
     name: str
@@ -119,20 +135,22 @@ AllPassboltTupleTypes = Union[
     PassboltFolderTuple,
     PassboltGroupTuple,
     PassboltUserTuple,
-    PassboltOpenPgpKeyTuple
+    PassboltOpenPgpKeyTuple,
 ]
 
 
-def constructor(_namedtuple: AllPassboltTupleTypes,
-                renamed_fields: Union[None, dict] = None,
-                filter_fields: bool = True,
-                subconstructors: Union[None, dict] = None):
+def constructor(
+    _namedtuple: AllPassboltTupleTypes,
+    renamed_fields: Union[None, dict] = None,
+    filter_fields: bool = True,
+    subconstructors: Union[None, dict] = None,
+):
     def namedtuple_constructor(data: Union[Mapping, List[Mapping]]) -> List[AllPassboltTupleTypes]:
         """Returns a namedtuple constructor function that can --
-            1. Ingest dictionaries or list of dictionaries directly
-            2. Renames field names from dict -> namedtuple
-            3. Filters out dictionary keys that do not exist in namedtuple
-            4. Can apply further constructors to subfields"""
+        1. Ingest dictionaries or list of dictionaries directly
+        2. Renames field names from dict -> namedtuple
+        3. Filters out dictionary keys that do not exist in namedtuple
+        4. Can apply further constructors to subfields"""
         # 1. ingest datatypes
         is_singleton = False
         if isinstance(data, dict):
@@ -152,20 +170,14 @@ def constructor(_namedtuple: AllPassboltTupleTypes,
             # make sure that all final fieldnames are present in the namedtuple
             assert not set(renamed_fields.values()).difference(_namedtuple._fields)
             data = [
-                {
-                    (renamed_fields[k] if k in renamed_fields.keys() else k): v
-                    for k, v in datum.items()
-                }
+                {(renamed_fields[k] if k in renamed_fields.keys() else k): v for k, v in datum.items()}
                 for datum in data
             ]
 
         # 3. Filter extra fields not present in namedtuple definition
         if filter_fields:
             _ = data[0]
-            data = [
-                {k: v for k, v in datum.items() if k in _namedtuple._fields}
-                for datum in data
-            ]
+            data = [{k: v for k, v in datum.items() if k in _namedtuple._fields} for datum in data]
 
         # 4. [Composition] Apply constructors like this to individual fields
         if subconstructors:

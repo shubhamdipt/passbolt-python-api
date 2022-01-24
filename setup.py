@@ -18,18 +18,17 @@
 #     rm -rf ./dist && python3 setup.py sdist bdist_wheel && python3 -m twine upload dist/*
 #
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 # Usage: python setup.py sdist bdist_wheel
 
 links = []  # for repo urls (dependency_links)
 
-with open('requirements.txt') as fp:
+with open("requirements.txt") as fp:
     install_requires = fp.read()
 
 DESCRIPTION = "A python client for Passbolt."
-VERSION = "0.3.1"
-
+VERSION = "0.3.2"
 
 with open("README.md", "r") as fh:
     LONG_DESCRIPTION = fh.read()
@@ -41,16 +40,16 @@ setup(
     author_email="shubham.dipt@gmail.com",
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     url="https://github.com/shubhamdipt/passbolt-python-api",
     license="MIT",
-    packages=['passboltapi'],
+    packages=["passboltapi"],
     platforms=["any"],
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    ),
+    ],
     install_requires=install_requires,
     dependency_links=links,
 )

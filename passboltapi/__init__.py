@@ -1,7 +1,8 @@
 import configparser
+import json
 import logging
 import urllib.parse
-from typing import List, Mapping, Optional, Union
+from typing import List, Mapping, Optional, Tuple, Union
 
 import gnupg
 import requests
@@ -20,7 +21,9 @@ from passboltapi.schema import (
     PassboltPermissionTuple,
     PassboltResourceIdType,
     PassboltResourceTuple,
+    PassboltResourceType,
     PassboltResourceTypeIdType,
+    PassboltResourceTypeTuple,
     PassboltRoleIdType,
     PassboltSecretIdType,
     PassboltSecretTuple,
@@ -34,6 +37,10 @@ VERIFY_URL = "/auth/verify.json"
 
 
 class PassboltValidationError(Exception):
+    pass
+
+
+class PassboltError(Exception):
     pass
 
 
@@ -186,10 +193,52 @@ class PassboltAPI(APIClient):
 
     Design Principle: All passbolt aware public methods must accept or output one of PassboltTupleTypes"""
 
+    def _json_load_secret(self, secret: PassboltSecretTuple) -> Tuple[str, Optional[str]]:
+        try:
+            secret_dict = json.loads(self.decrypt(secret.data))
+            return secret_dict["password"], secret_dict["description"]
+        except (json.decoder.JSONDecodeError, KeyError):
+            return self.decrypt(secret.data), None
+
     def _encrypt_secrets(self, secret_text: str, recipients: List[PassboltUserTuple]) -> List[Mapping]:
         return [
             {"user_id": user.id, "data": self.encrypt(secret_text, user.gpgkey.fingerprint)} for user in recipients
         ]
+
+    def _get_secret(self, resource_id: PassboltResourceIdType) -> PassboltSecretTuple:
+        response = self.get(f"/secrets/resource/{resource_id}.json")
+        assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
+        return PassboltSecretTuple(**response["body"])
+
+    def _update_secret(self, resource_id: PassboltResourceIdType, new_secret):
+        return self.put(f"/resources/{resource_id}.json", {"secrets": new_secret}, return_response_object=True)
+
+    def _get_secret_type(self, resource_type_id: PassboltResourceTypeIdType) -> PassboltResourceType:
+        resource_type: PassboltResourceTypeTuple = self.read_resource_type(resource_type_id=resource_type_id)
+        resource_definition = json.loads(resource_type.definition)
+        if resource_definition["secret"]["type"] == "string":
+            return PassboltResourceType.PASSWORD
+        if resource_definition["secret"]["type"] == "object" and set(
+            resource_definition["secret"]["properties"].keys()
+        ) == {"password", "description"}:
+            return PassboltResourceType.PASSWORD_WITH_DESCRIPTION
+        raise PassboltError("The resource type definition is not valid or supported yet. ")
+
+    def get_password_and_description(self, resource_id: PassboltResourceIdType) -> dict:
+        resource: PassboltResourceTuple = self.read_resource(resource_id=resource_id)
+        secret: PassboltSecretTuple = self._get_secret(resource_id=resource_id)
+        secret_type = self._get_secret_type(resource_type_id=resource.resource_type_id)
+        if secret_type == PassboltResourceType.PASSWORD:
+            return {"password": self.decrypt(secret.data), "description": resource.description}
+        elif secret_type == PassboltResourceType.PASSWORD_WITH_DESCRIPTION:
+            pwd, desc = self._json_load_secret(secret=secret)
+            return {"password": pwd, "description": desc}
+
+    def get_password(self, resource_id: PassboltResourceIdType) -> str:
+        return self.get_password_and_description(resource_id=resource_id)["password"]
+
+    def get_description(self, resource_id: PassboltResourceIdType) -> str:
+        return self.get_password_and_description(resource_id=resource_id)["description"]
 
     def iterate_resources(self, params: Optional[dict] = None):
         params = params or {}
@@ -217,14 +266,6 @@ class PassboltAPI(APIClient):
             f"Key 'body[].children_resources' not found in response " f"keys: {response.keys()} "
         )
         return constructor(PassboltResourceTuple)(response["children_resources"])
-
-    def get_secret(self, resource_id: PassboltResourceIdType) -> PassboltSecretTuple:
-        response = self.get(f"/secrets/resource/{resource_id}.json")
-        assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
-        return PassboltSecretTuple(**response["body"])
-
-    def update_secret(self, resource_id: PassboltResourceIdType, new_secret):
-        return self.put(f"/resources/{resource_id}.json", {"secrets": new_secret}, return_response_object=True)
 
     def list_users(
         self, resource_or_folder_id: Union[None, PassboltResourceIdType, PassboltFolderIdType] = None, force_list=True
@@ -254,8 +295,33 @@ class PassboltAPI(APIClient):
             self.gpg.import_keys(user.gpgkey.armored_key)
             self.gpg.trust_keys(user.gpgkey.fingerprint, trustlevel)
 
+    def read_resource(self, resource_id: PassboltResourceIdType) -> PassboltResourceTuple:
+        response = self.get(f"/resources/{resource_id}.json", return_response_object=True)
+        response = response.json()["body"]
+        return constructor(PassboltResourceTuple)(response)
+
+    def read_resource_type(self, resource_type_id: PassboltResourceTypeIdType) -> PassboltResourceTypeTuple:
+        response = self.get(f"/resource-types/{resource_type_id}.json", return_response_object=True)
+        response = response.json()["body"]
+        return constructor(PassboltResourceTypeTuple)(response)
+
+    def read_folder(self, folder_id: PassboltFolderIdType) -> PassboltFolderTuple:
+        response = self.get(
+            f"/folders/{folder_id}.json", params={"contain[permissions]": True}, return_response_object=True
+        )
+        response = response.json()
+        return constructor(PassboltFolderTuple, subconstructors={"permissions": constructor(PassboltPermissionTuple)})(
+            response["body"]
+        )
+
     def describe_folder(self, folder_id: PassboltFolderIdType):
         return self.get(f"/folders/{folder_id}.json")
+
+    def move_resource_to_folder(self, resource_id: PassboltResourceIdType, folder_id: PassboltFolderIdType):
+        r = self.post(
+            f"/move/resource/{resource_id}.json", {"folder_parent_id": folder_id}, return_response_object=True
+        )
+        return r.json()
 
     def create_resource(
         self,
@@ -328,6 +394,10 @@ class PassboltAPI(APIClient):
         resource_type_id: Optional[PassboltResourceTypeIdType] = None,
         password: Optional[str] = None,
     ):
+        resource: PassboltResourceTuple = self.read_resource(resource_id=resource_id)
+        secret = self._get_secret(resource_id=resource_id)
+        secret_type = self._get_secret_type(resource_type_id=resource.resource_type_id)
+        resource_type_id = resource_type_id if resource_type_id else resource.resource_type_id
         payload = {
             "name": name,
             "username": username,
@@ -343,34 +413,22 @@ class PassboltAPI(APIClient):
             payload.pop("description")
         if uri is None:
             payload.pop("uri")
-        if resource_type_id is None:
-            payload.pop("resource_type_id")
 
-        if password is not None:
-            assert isinstance(password, str), f"password has to be a string object -- {password}"
-            recipients = self.list_users(resource_or_folder_id=resource_id)
+        recipients = self.list_users(resource_or_folder_id=resource_id)
+        if secret_type == PassboltResourceType.PASSWORD:
+            if password is not None:
+                assert isinstance(password, str), f"password has to be a string object -- {password}"
+                payload["secrets"] = self._encrypt_secrets(secret_text=password, recipients=recipients)
+        elif secret_type == PassboltResourceType.PASSWORD_WITH_DESCRIPTION:
+            pwd, desc = self._json_load_secret(secret=secret)
+            secret_dict = {}
+            if description is not None or password is not None:
+                secret_dict["description"] = description if description else desc
+                secret_dict["password"] = password if password else pwd
+            if secret_dict:
+                secret_text = json.dumps(secret_dict)
+                payload["secrets"] = self._encrypt_secrets(secret_text=secret_text, recipients=recipients)
 
-            payload["secrets"] = self._encrypt_secrets(password, recipients=recipients)
         if payload:
             r = self.put(f"/resources/{resource_id}.json", payload, return_response_object=True)
             return r
-
-    def move_resource_to_folder(self, resource_id: PassboltResourceIdType, folder_id: PassboltFolderIdType):
-        r = self.post(
-            f"/move/resource/{resource_id}.json", {"folder_parent_id": folder_id}, return_response_object=True
-        )
-        return r.json()
-
-    def read_folder(self, folder_id: PassboltFolderIdType) -> PassboltFolderTuple:
-        response = self.get(
-            f"/folders/{folder_id}.json", params={"contain[permissions]": True}, return_response_object=True
-        )
-        response = response.json()
-        return constructor(PassboltFolderTuple, subconstructors={"permissions": constructor(PassboltPermissionTuple)})(
-            response["body"]
-        )
-
-    def read_resource(self, resource_id: PassboltResourceIdType) -> PassboltResourceTuple:
-        response = self.get(f"/resources/{resource_id}.json", return_response_object=True)
-        response = response.json()["body"]
-        return constructor(PassboltResourceTuple)(response)
