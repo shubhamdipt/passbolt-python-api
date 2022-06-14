@@ -129,7 +129,13 @@ class APIClient:
         return str(self.gpg.encrypt(data=text, recipients=recipients or self.gpg_fingerprint, always_trust=True))
 
     def decrypt(self, text):
-        return str(self.gpg.decrypt(text, always_trust=True, passphrase=str(self.config["PASSBOLT"]["PASSPHRASE"])))
+        if "PASSPHRASE" in self.config["PASSBOLT"]:
+            passphrase = str(self.config["PASSBOLT"]["PASSPHRASE"])
+        else:
+            passphrase = None
+
+
+        return str(self.gpg.decrypt(text, always_trust=True, passphrase=passphrase))
 
     def get_headers(self):
         return {
