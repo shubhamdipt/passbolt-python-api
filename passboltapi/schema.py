@@ -1,6 +1,6 @@
 # Library Imports
 from enum import Enum
-from typing import List, Mapping, NamedTuple, Union
+from typing import List, Mapping, NamedTuple, Optional, Union
 
 from typing_extensions import TypeAlias
 
@@ -47,6 +47,10 @@ class PassboltPermissionTuple(NamedTuple):
     aro: Literal["Resource", "Folder"]
     aro_foreign_key: Union[PassboltResourceIdType, PassboltFolderIdType]
     type: int
+    created: PassboltDateTimeType
+    modified: PassboltDateTimeType
+    group: Union[None, "PassboltGroupTuple"] = None
+    user: Union[None, "PassboltUserTuple"] = None
 
 
 class PassboltOpenPgpKeyTuple(NamedTuple):
@@ -72,9 +76,9 @@ class PassboltUserTuple(NamedTuple):
     username: str
     role_id: PassboltRoleIdType
     profile: dict
-    role: dict
-    gpgkey: PassboltOpenPgpKeyTuple
     last_logged_in: PassboltDateTimeType
+    role: Optional[dict] = None
+    gpgkey: Optional[PassboltOpenPgpKeyTuple] = None
 
 
 class PassboltResourceTuple(NamedTuple):
@@ -126,6 +130,7 @@ class PassboltGroupTuple(NamedTuple):
     modified: PassboltDateTimeType
     modified_by: PassboltUserIdType
     name: str
+    groups_users: List[dict] = []
 
 
 AllPassboltTupleTypes = Union[
