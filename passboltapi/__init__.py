@@ -267,13 +267,27 @@ class PassboltAPI(APIClient):
         )
         return constructor(PassboltResourceTuple)(response["children_resources"])
 
+    def list_users_with_folder_access(self, folder_id: PassboltFolderIdType) -> List[PassboltUserTuple]:
+        folder_tuple = self.describe_folder(folder_id)
+        # resolve users
+        user_ids = set()
+        # resolve users from groups
+        for perm in folder_tuple.permissions:
+            if perm.aro == "Group":
+                group_tuple: PassboltGroupTuple = self.describe_group(perm.aro_foreign_key)
+                for group_user in group_tuple.groups_users:
+                    user_ids.add(group_user["user_id"])
+            elif perm.aro == "User":
+                user_ids.add(perm.aro_foreign_key)
+        return [user for user in self.list_users() if user.id in user_ids]
+
     def list_users(
         self, resource_or_folder_id: Union[None, PassboltResourceIdType, PassboltFolderIdType] = None, force_list=True
     ) -> List[PassboltUserTuple]:
         if resource_or_folder_id is None:
             params = {}
         else:
-            params = {"filter[has-access]": resource_or_folder_id}
+            params = {"filter[has-access]": resource_or_folder_id, "contain[user]": 1}
         params["contain[permission]"] = True
         response = self.get(f"/users.json", params=params)
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
@@ -315,7 +329,25 @@ class PassboltAPI(APIClient):
         )
 
     def describe_folder(self, folder_id: PassboltFolderIdType):
-        return self.get(f"/folders/{folder_id}.json")
+        """Shows folder details with permissions that are needed for some downstream task."""
+        response = self.get(
+            f"/folders/{folder_id}.json",
+            params={
+                "contain[permissions]": 1,
+                "contain[permissions.user.profile]": 1,
+                "contain[permissions.group]": 1,
+            },
+        )
+        assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
+        assert (
+            "permissions" in response["body"].keys()
+        ), f"Key 'body.permissions' not found in response: {response['body'].keys()}"
+        return constructor(
+            PassboltFolderTuple,
+            subconstructors={
+                "permissions": constructor(PassboltPermissionTuple),
+            }
+        )(response["body"])
 
     def move_resource_to_folder(self, resource_id: PassboltResourceIdType, folder_id: PassboltFolderIdType):
         r = self.post(
@@ -355,7 +387,7 @@ class PassboltAPI(APIClient):
         if folder_id:
             folder = self.read_folder(folder_id)
             # get users with access to folder
-            users_list = self.list_users(resource_or_folder_id=folder_id)
+            users_list = self.list_users_with_folder_access(folder_id)
             lookup_users: Mapping[PassboltUserIdType, PassboltUserTuple] = {user.id: user for user in users_list}
             self_user_id = [user.id for user in users_list if self.user_fingerprint == user.gpgkey.fingerprint]
             if self_user_id:
@@ -382,7 +414,7 @@ class PassboltAPI(APIClient):
             r_share = self.put(f"/share/resource/{resource.id}.json", share_payload, return_response_object=True)
 
             self.move_resource_to_folder(resource_id=resource.id, folder_id=folder_id)
-        return r_create
+        return resource
 
     def update_resource(
         self,
@@ -432,3 +464,7 @@ class PassboltAPI(APIClient):
         if payload:
             r = self.put(f"/resources/{resource_id}.json", payload, return_response_object=True)
             return r
+
+    def describe_group(self, group_id: PassboltGroupIdType):
+        response = self.get(f"/groups/{group_id}.json", params={"contain[groups_users]": 1})
+        return constructor(PassboltGroupTuple)(response["body"])
