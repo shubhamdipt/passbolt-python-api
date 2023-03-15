@@ -151,6 +151,8 @@ def constructor(
         2. Renames field names from dict -> namedtuple
         3. Filters out dictionary keys that do not exist in namedtuple
         4. Can apply further constructors to subfields"""
+        if data is None:
+            return
         # 1. ingest datatypes
         is_singleton = False
         if isinstance(data, dict):
