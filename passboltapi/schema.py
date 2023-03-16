@@ -150,7 +150,7 @@ def constructor(
     filter_fields: bool = True,
     subconstructors: Union[None, dict] = None,
 ):
-    def namedtuple_constructor(data: Union[Mapping, List[Mapping]]) -> List[AllPassboltTupleTypes]:
+    def namedtuple_constructor(data: Union[Mapping, List[Mapping]]) -> Optional[List[AllPassboltTupleTypes]]:
         """Returns a namedtuple constructor function that can --
         1. Ingest dictionaries or list of dictionaries directly
         2. Renames field names from dict -> namedtuple
@@ -158,6 +158,9 @@ def constructor(
         4. Can apply further constructors to subfields"""
         if data is None:
             return
+        if data == []:
+            return []
+
         # 1. ingest datatypes
         is_singleton = False
         if isinstance(data, dict):
