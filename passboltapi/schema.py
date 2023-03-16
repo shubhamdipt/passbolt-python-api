@@ -158,6 +158,9 @@ def constructor(
         4. Can apply further constructors to subfields"""
         if data is None:
             return
+        if data == []:
+            return []
+
         # 1. ingest datatypes
         is_singleton = False
         if isinstance(data, dict):
