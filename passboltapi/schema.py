@@ -150,7 +150,7 @@ def constructor(
     filter_fields: bool = True,
     subconstructors: Union[None, dict] = None,
 ):
-    def namedtuple_constructor(data: Union[Mapping, List[Mapping]]) -> List[AllPassboltTupleTypes]:
+    def namedtuple_constructor(data: Union[Mapping, List[Mapping]]) -> Optional[List[AllPassboltTupleTypes]]:
         """Returns a namedtuple constructor function that can --
         1. Ingest dictionaries or list of dictionaries directly
         2. Renames field names from dict -> namedtuple
