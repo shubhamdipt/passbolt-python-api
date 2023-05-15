@@ -69,7 +69,7 @@ class APIClient:
             raise ValueError("Missing value for SERVER in config.ini")
 
         self.server_url = self.config["PASSBOLT"]["SERVER"].rstrip("/")
-        self.user_fingerprint = self.config["PASSBOLT"]["USER_FINGERPRINT"].upper()
+        self.user_fingerprint = self.config["PASSBOLT"]["USER_FINGERPRINT"].upper().replace(" ", "")
         self.gpg = gnupg.GPG()
         if delete_old_keys:
             self._delete_old_keys()
