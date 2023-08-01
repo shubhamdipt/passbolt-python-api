@@ -1,5 +1,11 @@
 # Passbolt-python-API
 
+It is a python api client for Passbolt.
+
+#### Disclaimer
+* This project is a community driven project that is not associated with Passbolt S.A.
+* Passbolt and the Passbolt logo are registered trademarks of Passbolt S.A.
+
 ## Installation
 
     $pip install passbolt-python-api 
