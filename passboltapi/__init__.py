@@ -62,7 +62,7 @@ class APIClient:
         self.config = config
         if config_path:
             self.config = configparser.ConfigParser()
-            self.config.read_file(open(config_path, "r"))
+            self.config.read_file(open(config_path))
         self.requests_session = requests.Session()
 
         if not self.config:
@@ -107,14 +107,14 @@ class APIClient:
             raise ValueError("Missing value for USER_PUBLIC_KEY_FILE in config.ini")
         if not self.config["PASSBOLT"]["USER_PRIVATE_KEY_FILE"]:
             raise ValueError("Missing value for USER_PRIVATE_KEY_FILE in config.ini")
-        self.gpg.import_keys(open(self.config["PASSBOLT"]["USER_PUBLIC_KEY_FILE"], "r").read())
-        self.gpg.import_keys(open(self.config["PASSBOLT"]["USER_PRIVATE_KEY_FILE"], "r").read())
+        self.gpg.import_keys(open(self.config["PASSBOLT"]["USER_PUBLIC_KEY_FILE"]).read())
+        self.gpg.import_keys(open(self.config["PASSBOLT"]["USER_PRIVATE_KEY_FILE"]).read())
 
     def _login(self):
         r = self.requests_session.post(self.server_url + LOGIN_URL, json={"gpg_auth": {"keyid": self.gpg_fingerprint}}, verify=self.ssl_verify)
         encrypted_token = r.headers["X-GPGAuth-User-Auth-Token"]
         encrypted_token = urllib.parse.unquote(encrypted_token)
-        encrypted_token = encrypted_token.replace("\+", " ")
+        encrypted_token = encrypted_token.replace(r"\+", " ")
         token = self.decrypt(encrypted_token)
         self.requests_session.post(
             self.server_url + LOGIN_URL,
@@ -256,8 +256,7 @@ class PassboltAPI(APIClient):
         response = self.get("/resources.json" + url_params)
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
         resources = response["body"]
-        for resource in resources:
-            yield resource
+        yield from resources
 
     def list_resources(self, folder_id: Optional[PassboltFolderIdType] = None):
         params = {
