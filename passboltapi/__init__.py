@@ -51,20 +51,20 @@ class APIClient:
         config_path: Optional[str] = None,
         new_keys: bool = False,
         delete_old_keys: bool = False,
-        no_check_certificate: bool = False,
+        check_certificate: bool = False,
     ):
         """
         :param config: Config as a dictionary
         :param config_path: Path to the config file.
         :param delete_old_keys: Set true if old keys need to be deleted
-        :param no_check_certificate: disables SSL server certificate check.
+        :param check_certificate: enables SSL server certificate check.
         """
         self.config = config
         if config_path:
             self.config = configparser.ConfigParser()
             self.config.read_file(open(config_path, "r"))
         self.requests_session = requests.Session()
-        self.requests_session.verify = not no_check_certificate
+        self.requests_session.verify = check_certificate
 
         if not self.config:
             raise ValueError("Missing config. Provide config as dictionary or path to configuration file.")
