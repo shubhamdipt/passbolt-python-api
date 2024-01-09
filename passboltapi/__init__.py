@@ -51,17 +51,20 @@ class APIClient:
         config_path: Optional[str] = None,
         new_keys: bool = False,
         delete_old_keys: bool = False,
+        check_certificate: bool = False,
     ):
         """
         :param config: Config as a dictionary
         :param config_path: Path to the config file.
         :param delete_old_keys: Set true if old keys need to be deleted
+        :param check_certificate: enables SSL server certificate check.
         """
         self.config = config
         if config_path:
             self.config = configparser.ConfigParser()
             self.config.read_file(open(config_path, "r"))
         self.requests_session = requests.Session()
+        self.requests_session.verify = check_certificate
 
         if not self.config:
             raise ValueError("Missing config. Provide config as dictionary or path to configuration file.")
@@ -155,9 +158,7 @@ class APIClient:
         r = self.requests_session.get(self.server_url + url, headers=self.get_headers(), **kwargs)
         try:
             r.raise_for_status()
-            if return_response_object:
-                return r
-            return r.json()
+            return r if return_response_object else r.json()
         except requests.exceptions.HTTPError as e:
             logging.error(r.text)
             raise e
@@ -166,9 +167,7 @@ class APIClient:
         r = self.requests_session.put(self.server_url + url, json=data, headers=self.get_headers(), **kwargs)
         try:
             r.raise_for_status()
-            if return_response_object:
-                return r
-            return r.json()
+            return r if return_response_object else r.json()
         except requests.exceptions.HTTPError as e:
             logging.error(r.text)
             raise e
@@ -177,9 +176,7 @@ class APIClient:
         r = self.requests_session.post(self.server_url + url, json=data, headers=self.get_headers(), **kwargs)
         try:
             r.raise_for_status()
-            if return_response_object:
-                return r
-            return r.json()
+            return r if return_response_object else r.json()
         except requests.exceptions.HTTPError as e:
             logging.error(r.text)
             raise e
@@ -244,12 +241,10 @@ class PassboltAPI(APIClient):
         params = params or {}
         url_params = urllib.parse.urlencode(params)
         if url_params:
-            url_params = "?" + url_params
-        response = self.get("/resources.json" + url_params)
+            url_params = f"?{url_params}"
+        response = self.get(f"/resources.json{url_params}")
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
-        resources = response["body"]
-        for resource in resources:
-            yield resource
+        yield from response["body"]
 
     def list_resources(self, folder_id: Optional[PassboltFolderIdType] = None):
         params = {
@@ -258,8 +253,8 @@ class PassboltAPI(APIClient):
         }
         url_params = urllib.parse.urlencode(params)
         if url_params:
-            url_params = "?" + url_params
-        response = self.get("/folders.json" + url_params)
+            url_params = f"?{url_params}"
+        response = self.get(f"/folders.json{url_params}")
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
         response = response["body"][0]
         assert "children_resources" in response.keys(), (
@@ -289,7 +284,7 @@ class PassboltAPI(APIClient):
         else:
             params = {"filter[has-access]": resource_or_folder_id, "contain[user]": 1}
         params["contain[permission]"] = True
-        response = self.get(f"/users.json", params=params)
+        response = self.get("/users.json", params=params)
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
         response = response["body"]
         users = constructor(
@@ -462,8 +457,11 @@ class PassboltAPI(APIClient):
                 payload["secrets"] = self._encrypt_secrets(secret_text=secret_text, recipients=recipients)
 
         if payload:
-            r = self.put(f"/resources/{resource_id}.json", payload, return_response_object=True)
-            return r
+            return self.put(
+                f"/resources/{resource_id}.json",
+                payload,
+                return_response_object=True,
+            )
 
     def describe_group(self, group_id: PassboltGroupIdType):
         response = self.get(f"/groups/{group_id}.json", params={"contain[groups_users]": 1})
