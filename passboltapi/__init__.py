@@ -122,10 +122,24 @@ class APIClient:
                 "gpg_auth": {"keyid": self.gpg_fingerprint, "user_token_result": token},
             },
         )
-        self._get_csrf_token()
+        try:
+            self._get_csrf_token()
+        except requests.exceptions.HTTPError as e:
+            if (
+                e.response.status_code != requests.status_codes.codes.forbidden
+                or e.response.json()["header"]["message"]
+                != "MFA authentication is required."
+            ):
+                logging.error(r.text)
+                raise e
+            if not self.config["PASSBOLT"]["OTP"]:
+                raise ValueError("Missing value for OTP in config.ini")
+            self.post("/mfa/verify/totp.json", {"totp": self.config["PASSBOLT"]["OTP"]})
 
     def _get_csrf_token(self):
-        self.get("/users/me.json", return_response_object=True)  # Fetches the X-CSRF-Token header for future requests
+        """Fetches the X-CSRF-Token header for future requests"""
+        r = self.requests_session.get(self.server_url + "/users/me.json")
+        r.raise_for_status()
 
     def encrypt(self, text, recipients=None):
         return str(self.gpg.encrypt(data=text, recipients=recipients or self.gpg_fingerprint, always_trust=True))
