@@ -388,6 +388,10 @@ class PassboltAPI(APIClient):
             folder = self.read_folder(folder_id)
             # get users with access to folder
             users_list = self.list_users_with_folder_access(folder_id)
+            
+            # import users key to GPG otherwise secret share will fail
+            for user in users_list: self.gpg.import_keys(user.gpgkey.armored_key)
+
             lookup_users: Mapping[PassboltUserIdType, PassboltUserTuple] = {user.id: user for user in users_list}
             self_user_id = [user.id for user in users_list if self.user_fingerprint == user.gpgkey.fingerprint]
             if self_user_id:
