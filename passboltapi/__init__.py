@@ -51,12 +51,14 @@ class APIClient:
         config_path: Optional[str] = None,
         new_keys: bool = False,
         delete_old_keys: bool = False,
+        ssl_verify: bool = False,
     ):
         """
         :param config: Config as a dictionary
         :param config_path: Path to the config file.
         :param delete_old_keys: Set true if old keys need to be deleted
         """
+        self.ssl_verify = ssl_verify
         self.config = config
         if config_path:
             self.config = configparser.ConfigParser()
@@ -109,7 +111,7 @@ class APIClient:
         self.gpg.import_keys(open(self.config["PASSBOLT"]["USER_PRIVATE_KEY_FILE"], "r").read())
 
     def _login(self):
-        r = self.requests_session.post(self.server_url + LOGIN_URL, json={"gpg_auth": {"keyid": self.gpg_fingerprint}})
+        r = self.requests_session.post(self.server_url + LOGIN_URL, json={"gpg_auth": {"keyid": self.gpg_fingerprint}}, verify=self.ssl_verify)
         encrypted_token = r.headers["X-GPGAuth-User-Auth-Token"]
         encrypted_token = urllib.parse.unquote(encrypted_token)
         encrypted_token = encrypted_token.replace("\+", " ")
