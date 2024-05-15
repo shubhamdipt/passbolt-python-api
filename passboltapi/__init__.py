@@ -58,7 +58,7 @@ class APIClient:
         :param config_path: Path to the config file.
         :param delete_old_keys: Set true if old keys need to be deleted
         """
-        self.verify = verify
+        self.ssl_verify = ssl_verify
         self.config = config
         if config_path:
             self.config = configparser.ConfigParser()
