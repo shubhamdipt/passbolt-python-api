@@ -51,7 +51,7 @@ class APIClient:
         config_path: Optional[str] = None,
         new_keys: bool = False,
         delete_old_keys: bool = False,
-        ssl_verify: bool = False,
+        ssl_verify: bool = True,
     ):
         """
         :param config: Config as a dictionary
