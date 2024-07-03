@@ -83,6 +83,9 @@ Deleting existing keys:
     # One can also use it as context manager
     >>>with passboltapi.PassboltAPI(config_path="config.ini") as passbolt:
 
+    # One needs to periodically import the public keys from the passbolt server to their local gpg
+    >>>passbolt.import_public_keys("TRUST_FULLY")
+
 
 To get all resources
 
