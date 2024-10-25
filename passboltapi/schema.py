@@ -2,7 +2,10 @@
 from enum import Enum
 from typing import List, Mapping, NamedTuple, Optional, Union
 
-from typing_extensions import TypeAlias
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
 
 try:
     from typing import Literal
