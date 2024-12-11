@@ -75,7 +75,9 @@ class APIClient:
         self.server_url = self.config["PASSBOLT"]["SERVER"].rstrip("/")
 
         if self.cert_auth:
-            self.cert_auth = (self.config["PASSBOLT"]["SERVER_CERT_AUTH_CRT"], self.config["PASSBOLT"]["SERVER_CERT_AUTH_KEY"])
+            if not (self.config["PASSBOLT"]["SERVER_CERT_AUTH_CRT"] and self.config["PASSBOLT"]["SERVER_CERT_AUTH_KEY"]):
+                raise ValueError("Missing certificate and key in config.ini")
+            self.cert = (self.config["PASSBOLT"]["SERVER_CERT_AUTH_CRT"], self.config["PASSBOLT"]["SERVER_CERT_AUTH_KEY"])
         
         self.user_fingerprint = self.config["PASSBOLT"]["USER_FINGERPRINT"].upper().replace(" ", "")
         self.gpg = gnupg.GPG()
