@@ -26,6 +26,8 @@ Create a config file with the following contents.
     USER_PUBLIC_KEY_FILE = <optional: passbolt_public.asc>
     USER_PRIVATE_KEY_FILE = <optional: passbolt_private.asc>
     PASSPHRASE = <passbolt_password>
+    SERVER_CERT_AUTH_KEY= <optional: client.pem>
+    SERVER_CERT_AUTH_CRT= <optional: client.crt>
 
 Or as a dictionary
 
@@ -55,6 +57,11 @@ To delete old keys and import only the new ones.
 
     >>>import passboltapi
     >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", new_keys=True, delete_old_keys=True)
+
+To use with client certificate authentication use `SERVER_CERT_AUTH_CRT` and `SERVER_CERT_AUTH_KEY` (pem) in config file and:
+
+    >>>import passboltapi
+    >>>passbolt = passboltapi.PassboltAPI(config_path="config.ini", cert_auth=True)
 
 #### Using GPG
 

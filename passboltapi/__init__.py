@@ -52,6 +52,7 @@ class APIClient:
         new_keys: bool = False,
         delete_old_keys: bool = False,
         ssl_verify: bool = True,
+        cert_auth: bool = False
     ):
         """
         :param config: Config as a dictionary
@@ -60,6 +61,8 @@ class APIClient:
         """
         self.ssl_verify = ssl_verify
         self.config = config
+        self.cert_auth = cert_auth
+        self.cert = None
         if config_path:
             self.config = configparser.ConfigParser()
             self.config.read_file(open(config_path))
@@ -71,6 +74,12 @@ class APIClient:
             raise ValueError("Missing value for SERVER in config.ini")
 
         self.server_url = self.config["PASSBOLT"]["SERVER"].rstrip("/")
+
+        if self.cert_auth:
+            if not (self.config["PASSBOLT"]["SERVER_CERT_AUTH_CRT"] and self.config["PASSBOLT"]["SERVER_CERT_AUTH_KEY"]):
+                raise ValueError("Missing certificate and key in config.ini")
+            self.cert = (self.config["PASSBOLT"]["SERVER_CERT_AUTH_CRT"], self.config["PASSBOLT"]["SERVER_CERT_AUTH_KEY"])
+        
         self.user_fingerprint = self.config["PASSBOLT"]["USER_FINGERPRINT"].upper().replace(" ", "")
         self.gpg = gnupg.GPG()
         if delete_old_keys:
@@ -111,7 +120,7 @@ class APIClient:
         self.gpg.import_keys(open(self.config["PASSBOLT"]["USER_PRIVATE_KEY_FILE"]).read())
 
     def _login(self):
-        r = self.requests_session.post(self.server_url + LOGIN_URL, json={"gpg_auth": {"keyid": self.gpg_fingerprint}}, verify=self.ssl_verify)
+        r = self.requests_session.post(self.server_url + LOGIN_URL, json={"gpg_auth": {"keyid": self.gpg_fingerprint}}, verify=self.ssl_verify, cert=self.cert) # None is the default value in requests
         encrypted_token = r.headers["X-GPGAuth-User-Auth-Token"]
         encrypted_token = urllib.parse.unquote(encrypted_token)
         encrypted_token = encrypted_token.replace(r"\+", " ")
