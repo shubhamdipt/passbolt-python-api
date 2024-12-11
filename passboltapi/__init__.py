@@ -62,6 +62,7 @@ class APIClient:
         self.ssl_verify = ssl_verify
         self.config = config
         self.cert_auth = cert_auth
+        self.cert = None
         if config_path:
             self.config = configparser.ConfigParser()
             self.config.read_file(open(config_path))
