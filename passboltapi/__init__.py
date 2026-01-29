@@ -239,7 +239,7 @@ class PassboltAPI(APIClient):
     def _get_secret(self, resource_id: PassboltResourceIdType) -> PassboltSecretTuple:
         response = self.get(f"/secrets/resource/{resource_id}.json")
         assert "body" in response.keys(), f"Key 'body' not found in response keys: {response.keys()}"
-        return PassboltSecretTuple(**response["body"])
+        return constructor(PassboltSecretTuple)(response["body"])
 
     def _update_secret(self, resource_id: PassboltResourceIdType, new_secret):
         return self.put(f"/resources/{resource_id}.json", {"secrets": new_secret}, return_response_object=True)
